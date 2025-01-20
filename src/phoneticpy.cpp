@@ -7,6 +7,7 @@
 #include "phonetic.hpp"
 
 namespace nb = nanobind;
+using namespace nb::literals;
 
 NB_MODULE(phoneticpy, m)
 {
@@ -19,5 +20,5 @@ NB_MODULE(phoneticpy, m)
         .def("phone_to_syllable_count", &Phonetic::phone_to_syllable_count)
         .def("word_to_syllable_counts", &Phonetic::word_to_syllable_counts)
         .def("get_rhyming_part", &Phonetic::get_rhyming_part)
-        .def("search", &Phonetic::search);
+        .def("search", &Phonetic::search, "pattern"_a, "contains"_a = std::vector<std::string>{}, "Search for words with pronunciation matching regex pattern, among candidates with 1-3 phoneme runs specified in contains.");
 }
