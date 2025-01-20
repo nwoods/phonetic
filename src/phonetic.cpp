@@ -230,7 +230,7 @@ std::unordered_set<std::string> Phonetic::search(const std::string& pattern, con
     if(contains.empty())
     {
         // regex could be improved but should give enough index entries to hit
-        static const std::regex run_pattern = std::regex("((?:(?:^\\^)|(?:\\b" + phoneme_pattern() + " ))?" + phoneme_pattern() + "(?:(?:\\$$)|(?: " + phoneme_pattern() + "\\b))?)");
+        static const std::regex run_pattern = std::regex("((?:(?:^\\^)|(?:\\b" + phoneme_pattern() + " )|\\b)" + phoneme_pattern() + "(?:(?:\\$$)|(?: " + phoneme_pattern() + "\\b)|\\b))");
 
         std::sregex_iterator it(pattern.begin(), pattern.end(), run_pattern);
         auto the_end = std::sregex_iterator();
