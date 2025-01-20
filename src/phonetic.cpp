@@ -7,30 +7,28 @@
 
 #include <fstream>
 #include <iostream>
-#include <set>
 #include <sstream>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <stdexcept>
+#include <regex>
+#include <functional>
 
-Phonetic::Phonetic() {
-    import_dictionary();
+Phonetic::Phonetic() : m_dictionary(import_dictionary()), m_phoneme_idx(generate_idx(m_dictionary)) {
 }
 
-bool Phonetic::import_dictionary() {
+Phonetic::Dict_t Phonetic::import_dictionary() {
 
     std::string file_path = CMU_DICT_PATH;
 
-    #ifdef __EMSCRIPTEN__   
+    #ifdef __EMSCRIPTEN__
     file_path = "/data/cmudict-0.7b";
     #endif
-    
-    
+
+    Dict_t dictionary;
+
     std::ifstream cmudict{file_path};
     if (!cmudict.is_open()) {
         std::cerr << "Failed to open the dictionary." << '\n';
-        return false;
+        return {};
     }
     std::string line;
     while (std::getline(cmudict, line)) {
@@ -41,18 +39,18 @@ bool Phonetic::import_dictionary() {
 
         std::istringstream iss(line);
 
-        // extract word up to white space   
+        // extract word up to white space
         std::string word;
         iss >> word;
 
         // strip variation "(n)", used in CMU DICT for multiple entries of same word
-        // instead each pronunciation is added to the vector m_dictionary[word]
+        // instead each pronunciation is added to the vector dictionary[word]
         if (word.back() == ')'){
             word.pop_back();
             word.pop_back();
             word.pop_back();
         }
-       
+
         // pronunciation is ARPABET symbols, separated by spaces
         // vowels end with a number indicating stress, 0 no stress, 1 primary stress, 2 secondary stress
         std::string pronunciation;
@@ -62,14 +60,66 @@ bool Phonetic::import_dictionary() {
         ltrim(pronunciation);
         rtrim(pronunciation);
 
-        m_dictionary[word].push_back(pronunciation);
+        dictionary[word].push_back(pronunciation);
     }
 
     cmudict.close();
-    return true;
+    return dictionary;
 }
 
-std::vector<std::string> Phonetic::word_to_phones(std::string word) {
+Phonetic::Idx_t Phonetic::generate_idx(const Phonetic::Dict_t& dictionary)
+{
+    Idx_t phoneme_idx;
+    std::vector<std::string> tokens;
+    for(const auto& dict_entry : dictionary)
+    {
+        const auto& word = dict_entry.first;
+        const auto& pronunciations = dict_entry.second;
+        for(const auto& pronunciation : pronunciations)
+        {
+            tokenize_inplace(pronunciation, tokens);
+
+            for(size_t i = 0; i < tokens.size(); ++i)
+            {
+                phoneme_idx[tokens[i]].insert(&dict_entry);
+                if(i == 0)
+                {
+                    phoneme_idx["^ " + tokens[i]].insert(&dict_entry);
+                    if(tokens.size() > 1)
+                    {
+                        phoneme_idx["^ " + tokens[i] + " " + tokens[i + 1]].insert(&dict_entry);
+                    }
+                }
+                if(i == (tokens.size() - 1))
+                {
+                    phoneme_idx[tokens[i] + " $"].insert(&dict_entry);
+                }
+                else
+                {
+                    phoneme_idx[tokens[i] + " " + tokens[i + 1]].insert(&dict_entry);
+
+                    if(tokens.size() > 1)
+                    {
+                        if(i == (tokens.size() - 2))
+                        {
+                            phoneme_idx[tokens[i] + " " + tokens[i + 1] + " $"].insert(&dict_entry);
+                        }
+                        else
+                        {
+                            phoneme_idx[tokens[i] + " " + tokens[i + 1] + tokens[i + 2]].insert(&dict_entry);
+                        }
+                    }
+                }
+            }
+
+            tokens.clear();
+        }
+    }
+
+    return phoneme_idx;
+}
+
+std::vector<std::string> Phonetic::word_to_phones(std::string word) const {
     // capitalize all queries
     std::transform(word.begin(), word.end(), word.begin(), ::toupper);
     auto it = m_dictionary.find(word);
@@ -81,7 +131,7 @@ std::vector<std::string> Phonetic::word_to_phones(std::string word) {
     }
 }
 
-std::vector<std::pair<std::vector<std::string>, bool>> Phonetic::text_to_phones(const std::string & text) {
+std::vector<std::pair<std::vector<std::string>, bool>> Phonetic::text_to_phones(const std::string & text) const {
 
     std::vector<std::pair<std::vector<std::string>, bool>> results{};
     std::vector<std::string> words {strip_punctuation(text)};
@@ -101,7 +151,7 @@ std::vector<std::pair<std::vector<std::string>, bool>> Phonetic::text_to_phones(
 }
 
 
-std::string Phonetic::phone_to_stress(const std::string& phones) {
+std::string Phonetic::phone_to_stress(const std::string& phones) const {
     std::string stresses{};
     for (const auto & c : phones){
         if (c == '0' || c == '1' || c == '2') {
@@ -111,7 +161,7 @@ std::string Phonetic::phone_to_stress(const std::string& phones) {
     return stresses;
 }
 
-std::vector<std::string> Phonetic::word_to_stresses(const std::string& word) {
+std::vector<std::string> Phonetic::word_to_stresses(const std::string& word) const {
     std::vector<std::string> stresses{};
 
     std::vector<std::string> phones{word_to_phones(word)};
@@ -121,11 +171,11 @@ std::vector<std::string> Phonetic::word_to_stresses(const std::string& word) {
     return stresses;
 }
 
-int Phonetic::phone_to_syllable_count(const std::string& phones) {
+int Phonetic::phone_to_syllable_count(const std::string& phones) const {
     return static_cast<int>(phone_to_stress(phones).length());
 }
 
-std::vector<int> Phonetic::word_to_syllable_counts(const std::string& word) {
+std::vector<int> Phonetic::word_to_syllable_counts(const std::string& word) const {
     std::vector<int> syllables;
     std::vector<std::string> phones{word_to_phones(word)};
     for(const auto & p : phones) {
@@ -134,7 +184,7 @@ std::vector<int> Phonetic::word_to_syllable_counts(const std::string& word) {
     return syllables;
 }
 
-std::string Phonetic::get_rhyming_part(const std::string& phones) {
+std::string Phonetic::get_rhyming_part(const std::string& phones) const {
     std::string result{};
     // if we were using C++23 we could use std::ranges::find_last_if, but we're not
 
@@ -169,6 +219,56 @@ std::string Phonetic::get_rhyming_part(const std::string& phones) {
 
     // else, there are no vowels at all, so we return an empty string
     return result;
+}
+
+
+std::unordered_set<std::string> Phonetic::search(const std::string& pattern, const std::vector<std::string>& contains) const
+{
+    if(contains.empty() || pattern.empty()) return {};
+
+    auto it_idx = m_phoneme_idx.find(contains[0]);
+    if(it_idx == m_phoneme_idx.end())
+    {
+        return {};
+    }
+    auto candidates = it_idx->second;
+
+    for(size_t i = 1; i < contains.size(); ++i)
+    {
+        it_idx = m_phoneme_idx.find(contains[i]);
+        if(it_idx == m_phoneme_idx.end())
+        {
+            return {};
+        }
+
+        // TODO when we move to C++20, replace the following with std::erase_if
+        auto it = candidates.begin();
+        while(it != candidates.end())
+        {
+            if(!it_idx->second.count(*it))
+            {
+                it = candidates.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        if(candidates.empty()) return {};
+    }
+
+    std::unordered_set<std::string> out;
+    std::regex re(pattern);
+    for(const auto& cand : candidates)
+    {
+        if(std::any_of(cand->second.begin(), cand->second.end(), [&](const std::string& x){return std::regex_search(x, re);}))
+        {
+            out.insert(cand->first);
+        }
+    }
+
+    return out;
 }
 
 #ifdef __EMSCRIPTEN__
