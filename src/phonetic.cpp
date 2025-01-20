@@ -84,15 +84,15 @@ Phonetic::Idx_t Phonetic::generate_idx(const Phonetic::Dict_t& dictionary)
                 phoneme_idx[tokens[i]].insert(&dict_entry);
                 if(i == 0)
                 {
-                    phoneme_idx["^ " + tokens[i]].insert(&dict_entry);
+                    phoneme_idx["^" + tokens[i]].insert(&dict_entry);
                     if(tokens.size() > 1)
                     {
-                        phoneme_idx["^ " + tokens[i] + " " + tokens[i + 1]].insert(&dict_entry);
+                        phoneme_idx["^" + tokens[i] + " " + tokens[i + 1]].insert(&dict_entry);
                     }
                 }
                 if(i == (tokens.size() - 1))
                 {
-                    phoneme_idx[tokens[i] + " $"].insert(&dict_entry);
+                    phoneme_idx[tokens[i] + "$"].insert(&dict_entry);
                 }
                 else
                 {
@@ -102,7 +102,7 @@ Phonetic::Idx_t Phonetic::generate_idx(const Phonetic::Dict_t& dictionary)
                     {
                         if(i == (tokens.size() - 2))
                         {
-                            phoneme_idx[tokens[i] + " " + tokens[i + 1] + " $"].insert(&dict_entry);
+                            phoneme_idx[tokens[i] + " " + tokens[i + 1] + "$"].insert(&dict_entry);
                         }
                         else
                         {
@@ -224,18 +224,39 @@ std::string Phonetic::get_rhyming_part(const std::string& phones) const {
 
 std::unordered_set<std::string> Phonetic::search(const std::string& pattern, const std::vector<std::string>& contains) const
 {
-    if(contains.empty() || pattern.empty()) return {};
+    if(pattern.empty()) return {};
 
-    auto it_idx = m_phoneme_idx.find(contains[0]);
+    std::vector<std::string> phoneme_runs(contains.begin(), contains.end());
+    if(contains.empty())
+    {
+        // regex could be improved but should give enough index entries to hit
+        static const std::regex run_pattern = std::regex("((?:(?:^\\^)|(?:\\b" + phoneme_pattern() + " ))?" + phoneme_pattern() + "(?:(?:\\$$)|(?: " + phoneme_pattern() + "\\b))?)");
+
+        std::sregex_iterator it(pattern.begin(), pattern.end(), run_pattern);
+        auto the_end = std::sregex_iterator();
+        size_t n_runs = 0;
+        for(; it != the_end && n_runs < 5; ++it)
+        {
+            phoneme_runs.push_back(it->str());
+            ++n_runs;
+        }
+
+        if(phoneme_runs.empty())
+        {
+            throw std::runtime_error("Could not extract phoneme runs from pattern \"" + pattern + "\". Please provide one or more manually.");
+        }
+    }
+
+    auto it_idx = m_phoneme_idx.find(phoneme_runs[0]);
     if(it_idx == m_phoneme_idx.end())
     {
         return {};
     }
     auto candidates = it_idx->second;
 
-    for(size_t i = 1; i < contains.size(); ++i)
+    for(size_t i = 1; i < phoneme_runs.size(); ++i)
     {
-        it_idx = m_phoneme_idx.find(contains[i]);
+        it_idx = m_phoneme_idx.find(phoneme_runs[i]);
         if(it_idx == m_phoneme_idx.end())
         {
             return {};

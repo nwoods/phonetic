@@ -57,95 +57,122 @@ inline std::vector<std::string> tokenize(const std::string& s, char delim=' ')
     return out;
 }
 
+namespace
+{
+static const std::unordered_set<std::string> valid_phonemes = {
+    "AA",
+    "AE",
+    "AH",
+    "AO",
+    "AW",
+    "AY",
+    "AA0",
+    "AE0",
+    "AH0",
+    "AO0",
+    "AW0",
+    "AY0",
+    "AA1",
+    "AE1",
+    "AH1",
+    "AO1",
+    "AW1",
+    "AY1",
+    "AA2",
+    "AE2",
+    "AH2",
+    "AO2",
+    "AW2",
+    "AY2",
+    "B",
+    "CH",
+    "D",
+    "DH",
+    "EH",
+    "ER",
+    "EY",
+    "EH0",
+    "ER0",
+    "EY0",
+    "EH1",
+    "ER1",
+    "EY1",
+    "EH2",
+    "ER2",
+    "EY2",
+    "F",
+    "G",
+    "HH",
+    "IH",
+    "IY",
+    "IH0",
+    "IY0",
+    "IH1",
+    "IY1",
+    "IH2",
+    "IY2",
+    "JH",
+    "K",
+    "L",
+    "M",
+    "N",
+    "NG",
+    "OW",
+    "OY",
+    "OW0",
+    "OY0",
+    "OW1",
+    "OY1",
+    "OW2",
+    "OY2",
+    "P",
+    "R",
+    "S",
+    "SH",
+    "T",
+    "TH",
+    "UH",
+    "UW",
+    "UH0",
+    "UW0",
+    "UH1",
+    "UW1",
+    "UH2",
+    "UW2",
+    "V",
+    "W",
+    "Y",
+    "Z",
+    "ZH"
+};
+} // anonymous namespace
+
 inline bool is_phoneme(const std::string& s)
 {
     if(s.size() == 0 || s.size() > 3) return false;
-    static const std::unordered_set<std::string> valid_phonemes = {
-        "AA",
-        "AE",
-        "AH",
-        "AO",
-        "AW",
-        "AY",
-        "AA0",
-        "AE0",
-        "AH0",
-        "AO0",
-        "AW0",
-        "AY0",
-        "AA1",
-        "AE1",
-        "AH1",
-        "AO1",
-        "AW1",
-        "AY1",
-        "AA2",
-        "AE2",
-        "AH2",
-        "AO2",
-        "AW2",
-        "AY2",
-        "B",
-        "CH",
-        "D",
-        "DH",
-        "EH",
-        "ER",
-        "EY",
-        "EH0",
-        "ER0",
-        "EY0",
-        "EH1",
-        "ER1",
-        "EY1",
-        "EH2",
-        "ER2",
-        "EY2",
-        "F",
-        "G",
-        "HH",
-        "IH",
-        "IY",
-        "IH0",
-        "IY0",
-        "IH1",
-        "IY1",
-        "IH2",
-        "IY2",
-        "JH",
-        "K",
-        "L",
-        "M",
-        "N",
-        "NG",
-        "OW",
-        "OY",
-        "OW0",
-        "OY0",
-        "OW1",
-        "OY1",
-        "OW2",
-        "OY2",
-        "P",
-        "R",
-        "S",
-        "SH",
-        "T",
-        "TH",
-        "UH",
-        "UW",
-        "UH0",
-        "UW0",
-        "UH1",
-        "UW1",
-        "UH2",
-        "UW2",
-        "V",
-        "W",
-        "Y",
-        "Z",
-        "ZH"
-    };
 
-    return bool(valid_phonemes.count(s));
+    return bool(::valid_phonemes.count(s));
+}
+
+inline std::string phoneme_pattern()
+{
+    std::stringstream ss;
+
+    ss << "(?:(?:";
+    bool first = true;
+    for(const auto& ph : ::valid_phonemes)
+    {
+        if(first)
+        {
+            first = false;
+        }
+        else
+        {
+            ss << ")|(?:";
+        }
+        ss << ph;
+    }
+    ss << "))";
+
+    return ss.str();
 }

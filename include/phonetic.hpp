@@ -101,16 +101,17 @@ public:
 
 
     /**
-     * Find dictionary words matching a pattern, from candidates containing 1-3 phoneme runs in containing. Phonemes in these runs must be space-separated, and may contain ^ and $ for beginning/end of words (also space-separated; these count as one of the three phonemes).
+     * Find dictionary words matching a pattern, from candidates containing 1-3 phoneme runs in containing. Phonemes in these runs must be space-separated, and may contain ^ and $ for beginning/end of words (not space-separated; these count as one of the three phonemes).
      * No validity checking is performed on contains (TODO)
      * TODO it would be better to return the pointers stored in the index, but I don't want to figure out how that interacts with Python yet.
+     * If contains is empty or not provided, we try to figure it out from pattern, and throw an exception if we can't.
      *
      * @param pattern (string): Regex to match
-     * @param containing (vector<string>): At least one run of 1-3 phonemes (or ^ or $ for beginning/end)
+     * @param contains (vector<string>, optional): At least one run of 1-3 phonemes (possibly including ^ or $ for beginning/end)
      * @return (unordered_set<string>): words from the dictionary containing all phoneme runs and matching pattern
      *
     */
-    std::unordered_set<std::string> search(const std::string& pattern, const std::vector<std::string>& contains) const;
+    std::unordered_set<std::string> search(const std::string& pattern, const std::vector<std::string>& contains={}) const;
 
     // TODO implement search by stress
 };
