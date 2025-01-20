@@ -84,15 +84,15 @@ Phonetic::Idx_t Phonetic::generate_idx(const Phonetic::Dict_t& dictionary)
                 phoneme_idx[tokens[i]].insert(&dict_entry);
                 if(i == 0)
                 {
-                    phoneme_idx["^ " + tokens[i]].insert(&dict_entry);
+                    phoneme_idx["^" + tokens[i]].insert(&dict_entry);
                     if(tokens.size() > 1)
                     {
-                        phoneme_idx["^ " + tokens[i] + " " + tokens[i + 1]].insert(&dict_entry);
+                        phoneme_idx["^" + tokens[i] + " " + tokens[i + 1]].insert(&dict_entry);
                     }
                 }
                 if(i == (tokens.size() - 1))
                 {
-                    phoneme_idx[tokens[i] + " $"].insert(&dict_entry);
+                    phoneme_idx[tokens[i] + "$"].insert(&dict_entry);
                 }
                 else
                 {
@@ -102,7 +102,7 @@ Phonetic::Idx_t Phonetic::generate_idx(const Phonetic::Dict_t& dictionary)
                     {
                         if(i == (tokens.size() - 2))
                         {
-                            phoneme_idx[tokens[i] + " " + tokens[i + 1] + " $"].insert(&dict_entry);
+                            phoneme_idx[tokens[i] + " " + tokens[i + 1] + "$"].insert(&dict_entry);
                         }
                         else
                         {
